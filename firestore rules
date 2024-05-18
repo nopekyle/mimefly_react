@@ -1,0 +1,300 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+  			match /usernames/{username}{
+        	allow read;
+          allow delete: if false;
+          allow update: if false;
+          allow create: if username == username.lower()
+          && username.size() <= 15
+          && username.matches("^[a-zA-Z0-9]+$")
+          && request.resource.data.uid is string;
+        }
+    
+        match /users/{userId}{
+        allow read;
+        allow delete: if false;
+
+        allow create: if request.resource.data.username.size() <= 15 
+        && request.resource.data.username.matches("^[a-zA-Z0-9]+$")
+        && request.resource.data.username.size() > 0
+        && request.resource.data.displayName.size() <= 20
+        && request.resource.data.about is string
+        && request.resource.data.coverPic is string
+        && request.resource.data.likes is number
+        && request.resource.data.mod is bool
+        && request.resource.data.private is bool
+        && request.resource.data.profilePic is string
+        && request.resource.data.search_key is string
+        && request.resource.data.username_lowercase == request.resource.data.username.lower()
+        && request.resource.data.deleted is bool;
+
+
+        allow update: if isLoggedIn() 
+        && request.resource.data.about.size() <= 100
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.displayName.size() <= 20
+        && request.resource.data.displayName.size() > 0
+        && request.auth.uid == userId;
+        
+        match /chats/{chat}{
+            allow read: if isLoggedIn();
+           
+            allow write: if isLoggedIn();
+        }
+    }
+    
+    match /users_public/{userId}{
+    	allow read;
+
+        allow create: if request.resource.data.followers is number
+        && request.resource.data.following is number
+        && request.resource.data.inboxCount is number
+        && request.resource.data.notificationsCount is number;
+
+        allow update: if isLoggedIn();
+        allow delete: if false;
+    }
+    
+  match /answersDeleted/{answerId}{
+    allow read, write: if false;
+  }
+    
+  match /questionsDeleted/{questionId}{
+    allow read, write: if false;
+  }
+    
+  match /commentsDeleted/{commentId}{
+    allow read, write: if false;
+  }
+
+
+    match /answers/{answerId}{
+        allow read;
+        allow delete: if false;
+
+        allow create: if isLoggedIn()
+        && request.resource.data.answerText.size() <= 1000
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.questionId.size() > 0
+        && request.resource.data.answerImage is string
+        && request.resource.data.deleted is bool
+        && request.resource.data.dateCreated is timestamp;
+
+        allow update: if isLoggedIn()
+        && request.auth.uid == resource.data.uid
+        && request.resource.data.answerText == resource.data.answerText
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.questionId == resource.data.questionId
+        && request.resource.data.answerImage == resource.data.answerImage
+        && request.resource.data.dateCreated == resource.data.dateCreated;
+        
+        match /meta/{answerID}{
+        	allow read;
+          allow create: if isLoggedIn()
+          && request.resource.data.comments is number
+          && request.resource.data.likes is number;
+          
+          allow update: if isLoggedIn();
+          
+          allow delete: if false;
+        }
+    }
+
+    match /comment_likes/{commentLike}{
+        allow read;
+        allow delete: if isLoggedIn() && request.auth.uid == resource.data.uid;
+        allow update: if false;
+        allow create: if isLoggedIn() && request.auth.uid == request.resource.data.uid 
+        && request.resource.data.commentId != null
+        && request.resource.data.dateCreated != null;
+    }
+
+    match /comments/{commentId}{
+        allow read;
+        allow delete: if false;
+        allow update: if isLoggedIn() 
+        && request.auth.uid == resource.data.uid
+        && request.resource.data.commentText == resource.data.commentText
+        && request.resource.data.uid == request.auth.uid 
+        && request.resource.data.parent_type == resource.data.parent_type
+        && request.resource.data.parent == resource.data.parent
+        && request.resource.data.dateCreated == resource.data.dateCreated;
+
+        allow create: if isLoggedIn() 
+        && request.resource.data.uid == request.auth.uid 
+        && request.resource.data.commentText.size() <= 250
+        && request.resource.data.deleted is bool
+        && request.resource.data.parent is string
+        && request.resource.data.dateCreated is timestamp
+        && request.resource.data.parent_type is string;
+        
+        match /meta/{commentID}{
+        	allow read;
+          allow delete: if false;
+          allow create: if isLoggedIn()
+          && request.resource.data.likes is number
+          && request.resource.data.replies is number;
+          
+          allow update: if isLoggedIn();
+        }
+    }
+
+    match /following/{followId}{
+        allow read;
+        allow update: if false;
+        allow create: if isLoggedIn() 
+        && request.resource.data.uid == request.auth.uid;
+        allow delete: if isLoggedIn();
+    }
+    
+    match /tokens/{token}{
+    	allow read, write: if isLoggedIn()
+    }
+
+    match /inbox/{inbox}{
+        allow read: if isLoggedIn();
+        allow create: if isLoggedIn()
+        && request.resource.data.dateCreated is timestamp
+        && request.resource.data.from_uid == request.auth.uid
+        && request.resource.data.uid is string
+        && request.resource.data.questionId is string;
+        allow update: if false;
+        allow delete: if isLoggedIn()
+        && (request.auth.uid == resource.data.from_uid 
+        || request.auth.uid == resource.data.uid);
+    }
+
+    match /likes/{like}{
+        allow read;
+        allow update: if false;
+        allow create: if isLoggedIn() 
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.answerId is string
+        && request.resource.data.dateCreated is timestamp;
+        allow delete: if isLoggedIn() && resource.data.uid == request.auth.uid;
+    }
+    
+    match /chats/{chatID}{
+    	allow read: if isLoggedIn()
+      && request.auth.uid in resource.data.members;
+      
+      allow create: if isLoggedIn()
+      && request.auth.uid in request.resource.data.members;
+      allow delete: if false;
+      allow update: if request.resource.data.members == resource.data.members;
+      
+      
+      match /messages/{messageID}{
+      	allow read: if isLoggedIn()
+				&& request.auth.uid in resource.data.members;
+        allow create: if isLoggedIn()
+        && request.auth.uid == request.resource.data.idFrom
+        && request.resource.data.idTo is string
+        && request.resource.data.dateCreated is timestamp
+        && request.resource.data.messageImage is string
+        && request.resource.data.messageText is string;
+        
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    match /notifications/{notification}{
+        allow read: if isLoggedIn() && resource.data.to_uid == request.auth.uid;
+        allow update, delete: if false;
+        allow create: if isLoggedIn() 
+        && request.resource.data.from_uid == request.auth.uid
+        && request.resource.data.dateCreated is timestamp
+        && request.resource.data.postId is string
+        && request.resource.data.to_uid is string
+        && request.resource.data.type is string;
+    }
+
+    match /questions/{questionId}{
+        allow read;
+        allow delete: if false;
+
+        allow create: if isLoggedIn() 
+        && request.resource.data.questionText.size() <= 500 
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.anonymous is bool 
+        && request.resource.data.deleted is bool
+        && request.resource.data.direct is bool
+        && request.resource.data.dateCreated is timestamp
+        && request.resource.data.answerCount is number
+        && request.resource.data.questionImage is string;
+
+        allow update: if isLoggedIn() 
+        && request.auth.uid == resource.data.uid
+        && request.resource.data.questionText == resource.data.questionText
+        && request.resource.data.questionImage == resource.data.questionImage
+        && request.resource.data.uid == resource.data.uid;
+        
+        match /meta/{questionID}{
+        	allow read;
+          allow create: if isLoggedIn()
+          && request.resource.data.answer_count is number;
+          
+          allow delete: if false;
+          allow update: if isLoggedIn();
+        }
+    }
+
+    match /reports/{report}{
+        allow read;
+        allow delete;
+        allow update: if false;
+        allow create: if isLoggedIn();
+    }
+
+    match /tags/{tag}{
+        allow read;
+        allow create, update: if isLoggedIn();
+        allow delete: if false;
+    }
+
+    match /timeline/{timeline}{
+        allow read;
+        allow update: if false;
+        allow delete: if isLoggedIn() &&
+        (resource.data.to_uid == request.auth.uid 
+        || resource.data.from_uid == request.auth.uid);
+        allow create: if isLoggedIn()
+        && request.resource.data.answerId is string
+        && request.resource.data.dateCreated is timestamp
+        && request.resource.data.from_uid is string
+        && request.resource.data.to_uid is string;
+    }
+    
+    match /blocks/{block}{
+    		allow read;
+    		allow update: if false;
+        allow create: if isLoggedIn()
+        && request.resource.data.uid == request.auth.uid;
+        allow delete: if isLoggedIn()
+        && resource.data.uid == request.auth.uid;
+    
+    }
+    
+    match /statistics/posts{
+    		allow read;
+        allow delete: if false;
+        allow create: if false;
+        allow update;
+    }
+    
+    match /statistics/users{
+    		allow read;
+        allow delete: if false;
+        allow create: if false;
+        allow update;
+    }
+
+    function isLoggedIn(){
+        return request.auth.uid != null;
+    }
+
+  }
+}
