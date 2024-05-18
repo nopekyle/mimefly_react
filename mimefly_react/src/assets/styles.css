@@ -1,0 +1,31 @@
+.custom-container {
+    width: 444px; /* Fixed width for large screens */
+    max-width: 100%; /* Maximum width is 100% */
+  
+    /* Add margins, padding, or other styles as needed */
+    padding: 0;
+    margin: 0 auto; /* Center the container horizontally */
+  
+    /* Media queries for responsiveness */
+    @media (max-width: 576px) {
+      /* For screens 576px or less (phones), make it full width */
+      width: 100%;
+    }
+  
+    /* For screens between 577px and 1920px, keep the fixed width of 444px */
+  
+    @media (min-width: 577px) and (max-width: 1920px) {
+      width: 444px;
+    }
+  }
+
+  .custom-list {
+    list-style: none;
+    padding: 0%;
+    margin: 0%;
+  }
+
+ 
+
+
+  
